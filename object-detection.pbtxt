@@ -1,0 +1,92 @@
+item {
+  id: 1
+  name: '01_prohibitory_sign'
+}
+item {
+  id: 2
+  name: '02_danger_sign'
+}
+item {
+  id: 3
+  name: '03_priority_road'
+}
+item {
+  id: 4
+  name: '04_give_way'
+}
+item {
+  id: 5
+  name: '05_stop'
+}
+item {
+  id: 6
+  name: '06_no_entry'
+}
+item {
+  id: 7
+  name: '07_mandatory_sign'
+}
+item {
+  id: 8
+  name: '08_end_restriction_sign'
+}
+item {
+  id: 9
+  name: '09_blue_rectangle_sign'
+}
+item {
+  id: 10
+  name: '10_yellow_rectangle_sign'
+}
+item {
+  id: 11
+  name: '11_clearways'
+}
+item {
+  id: 12
+  name: '12_traffic_lights'
+}
+item {
+  id: 13
+  name: '13_matrix_sign'
+}
+item {
+  id: 14
+  name: '14_signage_sign'
+}
+item {
+  id: 15
+  name: '15_white_rectangle_sign'
+}
+item {
+  id: 16
+  name: '16_attention_sign'
+}
+item {
+  id: 17
+  name: '17_tourist_sign'
+}
+item {
+  id: 18
+  name: '18_end_emergency_lane'
+}
+item {
+  id: 19
+  name: '19_blue_attention_sign'
+}
+item {
+  id: 20
+  name: '20_blue_arrow_sign'
+}
+item {
+  id: 21
+  name: '21_white_arrow_sign'
+}
+item {
+  id: 22
+  name: '22_yellow_arrow_sign'
+}
+item {
+  id: 23
+  name: '23_green_rectangle_sign'
+}

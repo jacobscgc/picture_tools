@@ -1,0 +1,4 @@
+__pycache__/*
+.idea*
+picture_tools_settings.csv
+picture_tools_venv*
