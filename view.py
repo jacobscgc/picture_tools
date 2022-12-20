@@ -808,13 +808,15 @@ class GetTag(Frame):
         # Get all tags present in the image_catalog:
         self.tags = self.controller.catalog.tag_categories.tag_categories
         self.top2 = Toplevel(master)
+        self.top2.focus()  # Set the focus to this window so it registers key strokes.
         self.viewmethods = ViewMethods(self.top2, self.controller)
         Frame.__init__(self, self.top2)
         self.grid(sticky=W + E + N + S)
         self.l1 = Label(self.top2)
         self.l1.grid()
-        self.top2.bind('<Any-Key>', self.bound)
-        self.top2.bind('<KP_Enter>', lambda e: self.select_tag_category())
+        for i in range(10):  # bind all numeric keys
+            self.top2.bind(str(i), self.bound)
+        self.top2.bind('+', lambda e: self.select_tag_category())
         self.create_popup()
 
     def bound(self, event):
@@ -857,13 +859,10 @@ class GetTag(Frame):
         :return: numeric value (1) or None if no keypad entry has been given.
         """
         value = None
-        if keysym[:3] == 'KP_':  # only process input from keypad
-            # Cut off the KP_ part of the input
-            try:
-                value = int(keysym[3:])
-            except ValueError:
-                pass
-
+        try:
+            value = int(keysym)
+        except ValueError:
+            pass
         return value
 
     def cancel(self):
@@ -1051,11 +1050,11 @@ class KeyBindings:
         
         When adding a tag, a pop-up appears. Tag_category can be selected in 2 ways:
         1) by selecting it in the list
-        2) by binding it to a keypad numeric code
+        2) by binding it to a numeric code
         
         To bind a tag_category to a keypad numeric code, prepend the tag_category with '<code>_' when adding a new
         tag_category. For example, bind the code 1144 to tag_category 'AND' > 1144_AND
-        Now, when the pop-up is active,  press 1144 and then the keypad ENTER key to add this tag.
+        Now, when the pop-up is active, press 1144 and then the + key to add this tag.
         
         t\t\t\t\tAdd full image tag.
         Ctrl + Left mouse button\t\tCreate bounding-box tag in image (drag mouse)   
