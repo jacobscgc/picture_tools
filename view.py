@@ -1040,7 +1040,7 @@ class KeyBindings:
 
         Zooming:
 
-        Ctrl + MouseWheel\t\tZoom in or out
+        MouseWheel\t\tZoom in or out
         w\t\t\t\tMove up in zoomed image
         s\t\t\t\tMove down in zoomed image
         a\t\t\t\tMove left in zoomed image
