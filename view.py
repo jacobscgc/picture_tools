@@ -147,8 +147,7 @@ class Application(Frame):
         self.master.bind('<Control-Shift-Delete>', lambda event: self.delete_single_image_from_disk())
         self.master.bind('t', lambda event: self.add_full_image_tag())
         # Control zoom-level:s
-        self.master.bind("<Control-Button-4>", lambda event: self.lin_zoom_in())
-        self.master.bind("<Control-Button-5>", lambda event: self.lin_zoom_out())
+        self.master.bind("<MouseWheel>", self.zoom)
         # Keybindings to scroll over an image:
         self.master.bind('w', lambda event: self.scroll_up())
         self.master.bind('s', lambda event: self.scroll_down())
@@ -357,23 +356,25 @@ class Application(Frame):
     def scroll_up(self):
         self.canvas.yview_scroll(-1, "units")
 
-    def lin_zoom_in(self):
-        if self.zoomcycle != 5:
-            self.zoomcycle += 1
-        if self.selected_image is not None:
-            self.show_image()
+    def zoom(self, event):
+        if event.delta == 120:
+            # zooming out
+            if self.zoomcycle != 5:
+                self.zoomcycle += 1
+            if self.selected_image is not None:
+                self.show_image()
+        else:
+            # zooming in
+            if self.zoomcycle != 0:
+                self.zoomcycle -= 1
+            if self.zoomcycle == 0:
+                self.recenter_canvas()
+            if self.selected_image is not None:
+                self.show_image()
 
     def recenter_canvas(self):
         self.canvas.xview_moveto(self.origX)
         self.canvas.yview_moveto(self.origY)
-
-    def lin_zoom_out(self):
-        if self.zoomcycle != 0:
-            self.zoomcycle -= 1
-        if self.zoomcycle == 0:
-            self.recenter_canvas()
-        if self.selected_image is not None:
-            self.show_image()
 
     def activate_image(self):
         """
