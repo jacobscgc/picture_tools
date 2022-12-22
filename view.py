@@ -16,7 +16,7 @@ class Application(Frame):
     image_scrollbar, tag_scrollbar = None, None
     pil_image, origX, origY, zoomcycle, zoom_factor = None, None, None, 0, 1
     selected_image, win_w, win_h = None, None, None  # keep track of active image / window size to deal with resizing
-    selected_tag, active_tag_id = None, None
+    selected_tag, active_tag_id, active_tag_name = None, None, None
     savefile_location = None
     min_tagsize = 0
     sorting_method = 'file_name'
@@ -54,14 +54,21 @@ class Application(Frame):
 
         # Create a canvas where the images are displayed:
         self.canvas = Canvas(self.master, bg='black', bd=10, cursor='cross', relief='ridge')
+        # The focus_on_canvas bindings are needed to keep the key bindins active on canvas!
+        self.canvas.bind("<Enter>", lambda e: self.focus_on_canvas())
+        self.canvas.bind("<ButtonPress-1>", lambda e: self.focus_on_canvas())
         self.canvas.bind("<Control_L>", self.on_control_press)
         self.canvas.bind("<Control_R>", self.on_control_press)
         self.canvas.bind("<Control-Motion>", self.on_control_move)
-        self.master.bind("<KeyRelease-Control_L>", lambda e: self.on_control_release())
-        self.master.bind("<KeyRelease-Control_R>", lambda e: self.on_control_release())
+        self.canvas.bind("<KeyRelease-Control_L>", lambda e: self.on_control_release())
+        self.canvas.bind("<KeyRelease-Control_R>", lambda e: self.on_control_release())
         self.canvas.bind("<Control-ButtonPress-1>", self.on_button_press)
         self.canvas.bind("<B1-Motion>", self.on_move_press)
         self.canvas.bind("<ButtonRelease-1>", lambda e: self.on_button_release())
+        self.canvas.bind("<Shift_L>", self.select_tag)
+        self.canvas.bind("<Shift_R>", self.select_tag)
+        # Control zoom-level:s
+        self.canvas.bind("<MouseWheel>", self.zoom)
         self.canvas.grid(row=0, rowspan=2, column=2, sticky=W+E+N+S)
         self.canvas.update()
         self.origX = self.canvas.xview()[0]
@@ -146,8 +153,6 @@ class Application(Frame):
         self.master.bind('<Control-Delete>', lambda event: self.delete_single_image())
         self.master.bind('<Control-Shift-Delete>', lambda event: self.delete_single_image_from_disk())
         self.master.bind('t', lambda event: self.add_full_image_tag())
-        # Control zoom-level:s
-        self.master.bind("<MouseWheel>", self.zoom)
         # Keybindings to scroll over an image:
         self.master.bind('w', lambda event: self.scroll_up())
         self.master.bind('s', lambda event: self.scroll_down())
@@ -184,8 +189,7 @@ class Application(Frame):
         """This function adds a full-image tag to the selected image"""
         if self.selected_image is not None:
             # Get tag_category to add:
-            gettag = GetTag(self.master, self.controller)
-            self.master.wait_window(gettag.top2)
+            gettag = self.gettag_popup()
             tag_category = gettag.value
             if tag_category is not None:
                 self.controller.add_tag(self.selected_image, tag_category)
@@ -197,6 +201,36 @@ class Application(Frame):
 
     def show_keybindings(self):
         KeyBindings(self.master)
+
+    def select_tag(self, event):
+        """
+        This function selects the tag based on the mouse location on the canvas. If the mouse is in the area of a tag,
+        it selects this tag.
+        """
+        x = self.canvas.canvasx(event.x)
+        y = self.canvas.canvasy(event.y)
+        # Calculate the canvas coordinates back to image coordinates:
+        canvas_coords = [x, y, x+10, y+10]  # add second set of x,y to use pre-existing converter to image coords
+        # Next, get the size of the canvas and of the resized image (current size):
+        resolution = (self.canvas.winfo_width() * self.zoom_factor, self.canvas.winfo_height() * self.zoom_factor)
+        ratio, pil_image = self.controller.calculate_ratio(self.selected_image, resolution)
+        # Retrieve the image coordinates for these canvas coordinates:
+        canvas_grid_size = (self.canvas.winfo_width(), self.canvas.winfo_height())
+        image_size = self.controller.retrieve_image_object(self.selected_image).size
+        image_coords = self.controller.canvas_coords_to_image_coords(canvas_coords, canvas_grid_size,
+                                                                     pil_image, ratio, image_size)
+        x = image_coords[0]
+        y = image_coords[1]
+
+        tag_dictionary = self.controller.retrieve_tags(self.selected_image)
+        for i in tag_dictionary:
+            tag_category = tag_dictionary[i].tag_category
+            xmin, ymin, xmax, ymax = tag_dictionary[i].coordinates
+            if xmin < x < xmax and ymin < y < ymax:
+                self.active_tag_id = i
+                self.active_tag_name = f'{i}_{tag_category}'
+                self.tag_select(set_active_tag=False)
+                self.activate_tag()
 
     def delete_single_image(self):
         """Deletes a single image from the image_list"""
@@ -267,8 +301,7 @@ class Application(Frame):
     def export_images_one_tag_category(self):
         """This function exports the images for one certain tag_category to a folder on the computer"""
         # Get tag_category to export:
-        gettag = GetTag(self.master, self.controller)
-        self.master.wait_window(gettag.top2)
+        gettag = self.gettag_popup()
         tag_category = [gettag.value]  # as a list
         # Get save location:
         save_location = self.viewmethods.ask_directory(self.master, txt='Please select folder to export the images to')
@@ -281,8 +314,7 @@ class Application(Frame):
     def rename_tag_category(self):
         """This function replaces a tag_category name with a new one"""
         # Get tag_category to rename:
-        gettag = GetTag(self.master, self.controller)
-        self.master.wait_window(gettag.top2)
+        gettag = self.gettag_popup()
         tag_category = gettag.value
         # Get value to rename it with:
         userinput = UserInput(self.master, 'Please enter a new name for the tag category')
@@ -299,8 +331,7 @@ class Application(Frame):
         self.set_active_tag()
         if self.active_tag_id is not None:
             # Get tag_category to replace the old one with:
-            gettag = GetTag(self.master, self.controller)
-            self.master.wait_window(gettag.top2)
+            gettag = self.gettag_popup()
             new_tag_category = gettag.value
             if new_tag_category is not None:
                 # Modify tag_category:
@@ -311,8 +342,7 @@ class Application(Frame):
     def change_tag_category_color(self):
         """This function replaces the color used for a tag_category"""
         # Get tag_category to replace the color of:
-        gettag = GetTag(self.master, self.controller)
-        self.master.wait_window(gettag.top2)
+        gettag = self.gettag_popup()
         tag_category = gettag.value
         # Get the new color:
         userinput = UserInput(self.master, 'Please enter a HEX color')
@@ -322,11 +352,21 @@ class Application(Frame):
         self.controller.change_tag_category_color(tag_category, color)
         self.show_image()
 
-    def remove_tag_category(self):
-        """This function removes a tag_category"""
-        # Get tag_category to remove:
+    def gettag_popup(self):
+        """
+        This function creates the GetTag() popup and waits for the returned value. It cancels the binding of 'Enter'
+        to the canvas before creating the popup and re-enables it after it is done. Otherwise, moving the mouse over
+        the canvas will automatically hide the popup.
+        """
+        self.canvas.unbind("<Enter>")  # prevent the 'Enter' on canvas to hide popup
         gettag = GetTag(self.master, self.controller)
         self.master.wait_window(gettag.top2)
+        self.canvas.bind("<Enter>", lambda e: self.focus_on_canvas())  # bind it again
+        return gettag
+
+    def remove_tag_category(self):
+        """This function removes a tag_category"""
+        gettag = self.gettag_popup()
         tag_category = gettag.value
         # Check whether there are any tags for this tag_category in the current catalog images:
         count = self.controller.extract_entries_for_tag_category(tag_category)
@@ -378,7 +418,7 @@ class Application(Frame):
 
     def activate_image(self):
         """
-        This function displays the currently selected_tag image (sets it as active).
+        This function displays the currently selected_image image (sets it as active).
         """
         if self.selected_image is not None:
             # This function sets an image as the active image (displays it).
@@ -388,6 +428,17 @@ class Application(Frame):
             self.image_list.activate(index)  # sets this index as active (highlight it)
             self.image_list.see(index)  # makes sure that the highlighted item is visible in the listbox
             self.image_list.focus()
+
+    def activate_tag(self):
+        """
+        This function displays the currently selected_tag (set as active).
+        """
+        self.tag_list.selection_clear(0, 'end')  # First, clear the previous selection
+        if self.active_tag_name is not None:
+            index = self.tag_list.get(0, "end").index(self.active_tag_name)
+            self.tag_list.selection_set(index)  # sets this index as selected_tag
+            self.tag_list.activate(index)  # sets this index as active (highlight it)
+            self.tag_list.see(index)  # makes sure that the highlighted item is visible in the listbox
 
     def reset_image_list(self):
         """This function resets the image_list and sorts it. Call when changes to image_list have been made."""
@@ -426,14 +477,15 @@ class Application(Frame):
             self.viewmethods.sort_images(self.image_list, self.sorting_method)
             self.show_image()  # remake image
 
-    def tag_select(self):
+    def tag_select(self, set_active_tag=True):
         """
         This function sets a tag to active, assining it's tag_id to self.active_tag_id and highlighting the
         bounding box in red.
         """
         if self.selected_tag is not None:
             self.canvas.delete(self.selected_tag)
-        self.set_active_tag()
+        if set_active_tag:
+            self.set_active_tag()
         if self.active_tag_id is not None:
             tag_dictionary = self.controller.retrieve_tags(self.selected_image)
             coords = tag_dictionary[self.active_tag_id].coordinates
@@ -593,9 +645,7 @@ class Application(Frame):
             if self.selected_image is None:
                 ms.showinfo("Error", "Please select an image in the image list first.")
             else:
-                # Get the tag which should be used
-                gettag = GetTag(self.master, self.controller)
-                self.master.wait_window(gettag.top2)
+                gettag = self.gettag_popup()
                 tag = gettag.value
                 if tag is not None:
                     self.controller.add_tag(self.selected_image, tag, image_coords)
@@ -631,6 +681,9 @@ class Application(Frame):
         self.taglinewidth = linewidth.value
         if self.selected_image is not None:
             self.show_image()
+
+    def focus_on_canvas(self):
+        self.canvas.focus_set()
 
 
 class ImportExportMethods:
@@ -1061,6 +1114,10 @@ class KeyBindings:
         Ctrl + Left mouse button\t\tCreate bounding-box tag in image (drag mouse)   
         Ctrl + r\t\t\tDelete selected tag
         r\t\t\t\tModify Tag_category of selected tag
+        
+        To select a tag, either select it in the list on the bottom left or hover with the mouse over a tag and
+        press shift. The other functions can then be used ('Ctrl + r' to delete or 'r' to change category).
+        If the program does not respond to the Shift key, click the image with the mouse first.
         """
 
         self.label = Label(top, text=keybindings, font=('Times', 12), justify=LEFT)
