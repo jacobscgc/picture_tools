@@ -114,7 +114,7 @@ class ImageCatalog:
 
     def reset_date_range(self):
         """
-        This function resets the start end end date so new imports do not use the range anymore.
+        This function resets the start and end date so new imports do not use the range anymore.
         :return: resetted date range
         """
         self.start_date, self.end_date = None, None
