@@ -186,7 +186,7 @@ class Controller:
             resized_height = math.floor(ratio * pil_image.size[1])
 
             if ratio < 1:  # downsizing, use ANTIALIAS
-                pil_image = pil_image.resize((resized_width, resized_height), Image.ANTIALIAS)
+                pil_image = pil_image.resize((resized_width, resized_height), Image.LANCZOS)
             else:  # increasing size:
                 pil_image = pil_image.resize((resized_width, resized_height), Image.BICUBIC)
 
