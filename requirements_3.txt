@@ -1,6 +1,6 @@
 exifread~=3.0.0
 natsort~=8.2.0
-pillow~=10.0.1
+pillow~=10.2.0
 PyHamcrest==2.0.4
 pypiwin32~=223
 tkfilebrowser==2.3.2
